@@ -49,9 +49,9 @@
          Define values once, reference them everywhere as ${name}.
     ═══════════════════════════════════════════════════════════ -->
     <properties>
-        <!-- Tell Maven: use Java 17 language syntax when compiling -->
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <!-- Tell Maven: use Java 21 language syntax when compiling -->
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
 
         <!-- Prevents garbled characters in build output on Windows -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
