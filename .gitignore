@@ -1,0 +1,11 @@
+target/
+*.class
+
+# IDE specific files
+.idea/
+*.iml
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
