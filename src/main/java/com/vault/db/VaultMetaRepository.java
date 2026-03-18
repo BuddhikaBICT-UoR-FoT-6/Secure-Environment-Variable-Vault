@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HexFormat;
+
+import com.vault.crypto.KeyDerivation;
 
 /**
  * Handles database operations for the vault_meta table.
@@ -18,14 +21,16 @@ public class VaultMetaRepository {
 
     /**
      * Retrieves the PBKDF2 salt for the master password from the database.
-     * @return The salt as a Hex String, or null if it doesn't exist yet (first launch).
+     * 
+     * @return The salt as a Hex String, or null if it doesn't exist yet (first
+     *         launch).
      */
     public String getSaltHex() {
         String sql = "SELECT salt_hex FROM vault_meta WHERE id = 1";
-        
+
         try (PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
+                ResultSet rs = stmt.executeQuery()) {
+
             if (rs.next()) {
                 return rs.getString("salt_hex");
             }
@@ -37,19 +42,45 @@ public class VaultMetaRepository {
 
     /**
      * Saves the PBKDF2 salt for the master password.
+     * 
      * @param saltHex The 16-byte salt, converted to a Hex String.
      */
     public void saveSaltHex(String saltHex) {
         // SQLite supports INSERT OR REPLACE to handle upserts easily
         String sql = "INSERT OR REPLACE INTO vault_meta (id, salt_hex) VALUES (1, ?)";
-        
+
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, saltHex);
             stmt.executeUpdate();
-            
+
             System.out.println("[VaultMetaRepo] Saved master salt to database.");
         } catch (SQLException e) {
             throw new RuntimeException("Failed to save salt_hex to vault_meta", e);
         }
+    }
+
+    /**
+     * Retrieves the existing salt if present, otherwise generates a new 16-byte
+     * secure salt,
+     * saves it to the database, and returns it.
+     * 
+     * @return The master salt as a Hex String.
+     */
+    public String getOrGenerateSalt() {
+        String existingSalt = getSaltHex();
+        if (existingSalt != null) {
+            return existingSalt;
+        }
+
+        // Generate a new 16-byte secure salt
+        byte[] saltBytes = KeyDerivation.generateSalt();
+
+        // Convert explicitly to Hex String
+        String newSaltHex = HexFormat.of().formatHex(saltBytes);
+
+        // Save the newly generated salt in the DB
+        saveSaltHex(newSaltHex);
+
+        return newSaltHex;
     }
 }
