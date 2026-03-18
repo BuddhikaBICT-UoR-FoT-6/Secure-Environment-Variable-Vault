@@ -1,0 +1,55 @@
+package com.vault.db;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * Handles database operations for the vault_meta table.
+ * Principally used for storing and retrieving the global PBKDF2 salt.
+ */
+public class VaultMetaRepository {
+    private final Connection conn;
+
+    public VaultMetaRepository(Connection conn) {
+        this.conn = conn;
+    }
+
+    /**
+     * Retrieves the PBKDF2 salt for the master password from the database.
+     * @return The salt as a Hex String, or null if it doesn't exist yet (first launch).
+     */
+    public String getSaltHex() {
+        String sql = "SELECT salt_hex FROM vault_meta WHERE id = 1";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            if (rs.next()) {
+                return rs.getString("salt_hex");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to retrieve salt_hex from vault_meta", e);
+        }
+        return null;
+    }
+
+    /**
+     * Saves the PBKDF2 salt for the master password.
+     * @param saltHex The 16-byte salt, converted to a Hex String.
+     */
+    public void saveSaltHex(String saltHex) {
+        // SQLite supports INSERT OR REPLACE to handle upserts easily
+        String sql = "INSERT OR REPLACE INTO vault_meta (id, salt_hex) VALUES (1, ?)";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, saltHex);
+            stmt.executeUpdate();
+            
+            System.out.println("[VaultMetaRepo] Saved master salt to database.");
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to save salt_hex to vault_meta", e);
+        }
+    }
+}
