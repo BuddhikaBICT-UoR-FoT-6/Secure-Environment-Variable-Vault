@@ -32,7 +32,7 @@ public class VaultEntry {
     }
 
     // Creation constructor — used when the user creates a new vault entry in the UI
-    public VaultEntry(int projectId, String keyName, String value){
+    public VaultEntry(int projectId, String keyName, String ivHex, String ciphertextHex){
         this.id = -1; // not yet persisted to database
         this.projectId = projectId;
         this.keyName = keyName;
