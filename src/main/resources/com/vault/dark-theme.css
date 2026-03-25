@@ -1,0 +1,124 @@
+/* 
+    Local Vault - Dracula inspired Deep Dark Theme
+    Colors:
+    Background: #282a36
+    Current Line/Selection: #44475a
+    Foreground: #f8f8f2
+    Comment: #6272a4
+    Cyan: #8be9fd
+    Green: #50fa7b
+    Orange: #ffb86c
+    Pink: #ff79c6
+    Purple: #bd93f9
+    Red: #ff5555
+    Yellow: #f1fa8c
+*/
+
+.root {
+    -fx-base: #282a36;
+    -fx-control-inner-background: #282a36;
+    -fx-background-color: #282a36;
+    -fx-font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.label {
+    -fx-text-fill: #f8f8f2;
+}
+
+/* Text Fields and Password Fields */
+.text-field,
+.password-field {
+    -fx-background-color: #44475a;
+    -fx-text-fill: #f8f8f2;
+    -fx-highlight-fill: #bd93f9;
+    -fx-prompt-text-fill: #6272a4;
+    -fx-background-radius: 5;
+    -fx-border-color: #6272a4;
+    -fx-border-radius: 5;
+}
+
+.text-field:focused,
+.password-field:focused {
+    -fx-border-color: #bd93f9;
+}
+
+/* Buttons */
+.button {
+    -fx-background-color: #44475a;
+    -fx-text-fill: #f8f8f2;
+    -fx-cursor: hand;
+    -fx-background-radius: 5;
+    -fx-padding: 8 15 8 15;
+}
+
+.button:hover {
+    -fx-background-color: #6272a4;
+}
+
+.primary-button {
+    -fx-background-color: #bd93f9;
+    -fx-text-fill: #282a36;
+    -fx-font-weight: bold;
+}
+
+.primary-button:hover {
+    -fx-background-color: #ff79c6;
+}
+
+.success-button {
+    -fx-background-color: #50fa7b;
+    -fx-text-fill: #282a36;
+    -fx-font-weight: bold;
+}
+
+.danger-button {
+    -fx-background-color: #ff5555;
+    -fx-text-fill: #f8f8f2;
+}
+
+/* Tables */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: #44475a;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #44475a;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #f8f8f2;
+    -fx-border-color: transparent;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #282a36;
+}
+
+.table-row-cell:even {
+    -fx-background-color: #343746;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #44475a;
+    -fx-text-fill: #bd93f9;
+}
+
+/* Sidebar List */
+.list-view {
+    -fx-background-color: #282a36;
+    -fx-border-color: #44475a;
+}
+
+.list-cell:filled:selected {
+    -fx-background-color: #44475a;
+    -fx-text-fill: #bd93f9;
+}
+
+.list-cell:filled:hover {
+    -fx-background-color: #343746;
+}
