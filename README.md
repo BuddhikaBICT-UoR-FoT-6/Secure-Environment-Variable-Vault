@@ -74,6 +74,26 @@ The project strictly abides by the **Model-View-Controller (MVC)** architectural
 
 ---
 
+## Getting Started
+
+### Quick Start (From Source)
+```bash
+# 1. Clone the repo
+git clone https://github.com/BuddhikaBICT-UoR-FoT-6/Secure-Environment-Variable-Vault.git
+cd Secure-Environment-Variable-Vault
+
+# 2. Build and run
+mvn clean package
+java -jar target/secure-env-vault-1.0.0.jar
+```
+
+### Windows EXE Installer
+To package the application as a standalone Windows `.exe` (no Java install required for end users), see the full guide:
+
+📄 **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
+
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
