@@ -24,7 +24,7 @@ public final class DatabaseManager {
     // path to the directory where vault.db is stored
     // System.getProperty("user.home") = C:\Users\YourName
     // append "/.envvault" to keep app data isolated from the project
-    private static final String DB_DIR = System.getProperty("user.home") + File.separator + ".envvalut";
+    private static final String DB_DIR = System.getProperty("user.home") + File.separator + ".envvault";
 
     // final db path -> C:\Users\YourName\.envvault\vault.db
     private static final String DB_PATH = DB_DIR + File.separator + "vault.db";
@@ -90,6 +90,9 @@ public final class DatabaseManager {
     // Opens a JDBC connection to the SQLite database file at DB_PATH
     private void openConnection(){
         try{
+            // Explicitly load the driver class for shaded JAR compatibility
+            Class.forName("org.sqlite.JDBC");
+            
             connection = DriverManager.getConnection(JDBC_URL);
             System.out.println("Database connection established to " + DB_PATH);
 
@@ -99,7 +102,7 @@ public final class DatabaseManager {
                 st.execute("PRAGMA journal_mode=WAL;");
             }
 
-        }catch(SQLException e){
+        }catch(SQLException | ClassNotFoundException e){
             // If can't open the database, the entire app is useless
             // Wrap and re-throw as an unchecked exception to crash early with a clear message.
             throw new RuntimeException("Failed to open database at: " + DB_PATH, e);

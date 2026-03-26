@@ -67,6 +67,20 @@
             <version>1.5.6</version>
         </dependency>
 
+        <!-- ─── Database ──────────────────────────────────────────────── -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.45.3.0</version>
+        </dependency>
+
+        <!-- ─── Utilities ────────────────────────────────────────────── -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
         <!-- ─── Testing ──────────────────────────────────────────────── -->
         <!-- JUnit 5 -->
         <dependency>
