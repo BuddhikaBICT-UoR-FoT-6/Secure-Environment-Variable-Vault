@@ -72,6 +72,29 @@ Double-click it to install LocalVault to your Windows machine. After installatio
 
 ---
 
+## Troubleshooting
+
+### 'mvn' is not recognized as an internal or external command
+This happens if Maven is installed but not added to your Windows **PATH** variable.
+
+**The Instant Fix:**
+Find where Maven is installed (usually `C:\Program Files\apache-maven-x.x.x\bin`) and use the full path in quotes:
+```powershell
+& "C:\Path\To\Maven\bin\mvn.cmd" clean package
+```
+
+**The Permanent Fix:**
+1. Open **Edit the system environment variables**.
+2. Click **Environment Variables**.
+3. Under **System variables**, select **Path** and click **Edit**.
+4. Click **New** and paste the path to your Maven `bin` folder (e.g., `C:\Program Files\apache-maven-3.9.9\bin`).
+5. Click OK and **restart your terminal**.
+
+### Application crashes with 'Location is not set'
+Ensure you are running the command from the **root directory** of the project so that Java can find the FXML files in the resources path.
+
+---
+
 ## First-Time Setup (Both Options)
 
 1. Launch the app — the login screen appears.
