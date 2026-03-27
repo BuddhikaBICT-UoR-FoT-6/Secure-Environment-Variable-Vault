@@ -145,7 +145,8 @@ public final class DatabaseManager {
             // key_name     = the environment variable name, e.g. "DATABASE_URL"
             // stored in PLAINTEXT — variable names are not secret
             //   iv_hex       = the 12-byte AES-GCM IV, stored as hex string
-            //   ciphertex
+            //   is_locked    = 0 (unlocked) or 1 (face-locked)
+            //   lock_type    = 'none' | 'face'
             //   If a project is deleted, all its vault entries are automatically
             st.execute("""
                 CREATE TABLE IF NOT EXISTS vault_entries (
@@ -154,7 +155,21 @@ public final class DatabaseManager {
                     key_name       TEXT    NOT NULL,
                     iv_hex         TEXT    NOT NULL,
                     ciphertext_hex TEXT    NOT NULL,
+                    is_locked      INTEGER NOT NULL DEFAULT 0,
+                    lock_type      TEXT    NOT NULL DEFAULT 'none',
                     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                );
+            """);
+
+            // Table 4: git_repositories
+            // Tracks linked local clones of GitHub repositories
+            // path = absolute local path to the cloned repo
+            st.execute("""
+                CREATE TABLE IF NOT EXISTS git_repositories (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name       TEXT    NOT NULL,
+                    path       TEXT    NOT NULL UNIQUE,
+                    created_at TEXT    DEFAULT (datetime('now'))
                 );
             """);
 
