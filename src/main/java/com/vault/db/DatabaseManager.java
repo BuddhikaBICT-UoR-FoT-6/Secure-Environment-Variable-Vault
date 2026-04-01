@@ -157,6 +157,7 @@ public final class DatabaseManager {
                     ciphertext_hex TEXT    NOT NULL,
                     is_locked      INTEGER NOT NULL DEFAULT 0,
                     lock_type      TEXT    NOT NULL DEFAULT 'none',
+                    lock_data      TEXT,
                     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
                 );
             """);

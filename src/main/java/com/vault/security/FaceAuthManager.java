@@ -4,102 +4,198 @@ import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.javacv.OpenCVFrameConverter;
-import org.bytedeco.opencv.opencv_core.Mat;
-import org.bytedeco.opencv.opencv_core.RectVector;
+import org.bytedeco.opencv.global.opencv_imgcodecs;
+import org.bytedeco.opencv.global.opencv_imgproc;
+import org.bytedeco.opencv.opencv_core.*;
 import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.*;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
 /**
- * FaceAuthManager — provides face-presence detection using OpenCV Haar Cascades.
+ * FaceAuthManager — provides two-mode key locking.
  *
- * Security Model:
- *   This is a PRESENCE check, not an IDENTITY check. Any human face in frame
- *   will satisfy the requirement. This demonstrates image-processing integration
- *   with a security gate — appropriate for a v1.1 academic release.
+ * MODE 1 — Face Identity Lock (when webcam is available):
+ *   ENROLL:  Capture webcam frame → detect face → crop face ROI → save as JPEG to
+ *            ~/.envvault/faces/<entryId>.jpg
+ *   VERIFY:  Capture new frame → detect face → crop ROI → compare pixel MSE against
+ *            saved image. Returns true if MSE < threshold (same person).
  *
- * Implementation:
- *   - Loads haarcascade_frontalface_default.xml from the OpenCV native bundle.
- *   - Captures one frame from the default system webcam using JavaCV FrameGrabber.
- *   - Runs CascadeClassifier.detectMultiScale on the greyscale frame.
- *   - Returns true if at least one face rectangle is detected.
- *   - All resources (camera, classifier) are released after each call.
+ * MODE 2 — Grid PIN Lock (no webcam / user preference):
+ *   A PIN string selected character-by-character from a shuffled alphanumeric grid.
+ *   The PIN is stored as SHA-256 hash so the plaintext is never persisted.
+ *   Use hashPin() to store and verifyPin() to check.
  */
 public class FaceAuthManager {
 
-    // Path to the Haar cascade file bundled with OpenCV
     private static final String CASCADE_RESOURCE = "/haarcascade_frontalface_default.xml";
+    private static final String FACES_DIR =
+            System.getProperty("user.home") + File.separator + ".envvault" + File.separator + "faces";
+
+    // MSE pixel threshold below which two face images are considered same identity
+    private static final double SIMILARITY_THRESHOLD = 3000.0;
+
+    // ─────────────────────────────────────────────────────────────
+    //  Webcam Availability
+    // ─────────────────────────────────────────────────────────────
 
     /**
-     * Captures one webcam frame and returns true if a human face is detected.
-     *
-     * @return true if face detected, false otherwise (or on any error)
+     * Returns true if a webcam (device 0) can be opened successfully.
      */
-    public boolean isFaceDetected() {
-        File cascadeFile = null;
-        try {
-            // Extract the cascade XML from the classpath to a temp file
-            cascadeFile = extractCascadeToTempFile();
-            if (cascadeFile == null) {
-                System.err.println("[FaceAuthManager] Could not load Haar cascade.");
-                return false;
-            }
-
-            // Load the face classifier
-            CascadeClassifier classifier = new CascadeClassifier(cascadeFile.getAbsolutePath());
-            if (classifier.empty()) {
-                System.err.println("[FaceAuthManager] CascadeClassifier failed to load.");
-                return false;
-            }
-
-            // Grab one frame from the default webcam (device 0)
-            try (FrameGrabber grabber = FrameGrabber.createDefault(0)) {
-                grabber.start();
-                Frame frame = grabber.grab();
-                if (frame == null || frame.image == null) {
-                    System.err.println("[FaceAuthManager] Could not grab frame from webcam.");
-                    return false;
-                }
-
-                // Convert Frame → Mat (OpenCV format)
-                OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
-                Mat mat = converter.convert(frame);
-                if (mat == null || mat.empty()) return false;
-
-                // Detect faces
-                RectVector faces = new RectVector();
-                classifier.detectMultiScale(mat, faces);
-                boolean detected = faces.size() > 0;
-                System.out.println("[FaceAuthManager] Faces detected: " + faces.size());
-                return detected;
-            }
-
+    public boolean isWebcamAvailable() {
+        try (FrameGrabber grabber = FrameGrabber.createDefault(0)) {
+            grabber.start();
+            Frame f = grabber.grab();
+            return f != null && f.image != null;
         } catch (Exception e) {
-            System.err.println("[FaceAuthManager] Error during face detection: " + e.getMessage());
             return false;
-        } finally {
-            if (cascadeFile != null) cascadeFile.delete();
         }
     }
 
-    // Extracts the Haar cascade XML from the classpath to a temp file (required for CascadeClassifier)
-    private File extractCascadeToTempFile() {
-        try (InputStream is = getClass().getResourceAsStream(CASCADE_RESOURCE)) {
-            if (is == null) {
-                // Fall back to the OpenCV bundled data path
-                String opencvData = System.getProperty("user.home") + "/.m2/repository/org/bytedeco/opencv";
-                System.err.println("[FaceAuthManager] Cascade not found on classpath; check: " + opencvData);
+    // ─────────────────────────────────────────────────────────────
+    //  FACE MODE
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Enrols the user's face by capturing a frame, detecting the largest face,
+     * and saving the cropped greyscale face region to disk.
+     *
+     * @param entryId the vault entry ID (used as filename)
+     * @return absolute path to the saved face image, or null on failure
+     */
+    public String enrollFace(int entryId) {
+        try {
+            Mat face = captureFaceMat();
+            if (face == null) return null;
+
+            // Ensure storage directory exists
+            new File(FACES_DIR).mkdirs();
+            String savePath = FACES_DIR + File.separator + "face_" + entryId + ".jpg";
+            opencv_imgcodecs.imwrite(savePath, face);
+            System.out.println("[FaceAuthManager] Face enrolled at: " + savePath);
+            return savePath;
+        } catch (Exception e) {
+            System.err.println("[FaceAuthManager] Enrolment failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Verifies the current webcam face against the stored face image.
+     *
+     * @param savedFacePath path returned by enrollFace()
+     * @return true if the faces match within the similarity threshold
+     */
+    public boolean verifyFace(String savedFacePath) {
+        if (savedFacePath == null || !new File(savedFacePath).exists()) return false;
+        try {
+            Mat liveFace = captureFaceMat();
+            if (liveFace == null) return false;
+
+            Mat storedFace = opencv_imgcodecs.imread(savedFacePath, opencv_imgcodecs.IMREAD_GRAYSCALE);
+            if (storedFace.empty()) return false;
+
+            // Resize live face to match stored face dimensions for pixel comparison
+            Mat resized = new Mat();
+            opencv_imgproc.resize(liveFace, resized,
+                    new Size(storedFace.cols(), storedFace.rows()));
+
+            double mse = computeMSE(resized, storedFace);
+            System.out.printf("[FaceAuthManager] MSE = %.1f (threshold = %.1f)%n",
+                    mse, SIMILARITY_THRESHOLD);
+            return mse < SIMILARITY_THRESHOLD;
+        } catch (Exception e) {
+            System.err.println("[FaceAuthManager] Verification failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Captures one webcam frame, detects the largest face, and returns the
+     * greyscale cropped face region as a Mat. Returns null if no face found.
+     */
+    private Mat captureFaceMat() throws Exception {
+        File cascadeFile = extractCascadeToTempFile();
+        if (cascadeFile == null) return null;
+
+        CascadeClassifier classifier = new CascadeClassifier(cascadeFile.getAbsolutePath());
+        if (classifier.empty()) return null;
+
+        try (FrameGrabber grabber = FrameGrabber.createDefault(0)) {
+            grabber.start();
+            Frame frame = grabber.grab();
+            if (frame == null || frame.image == null) return null;
+
+            OpenCVFrameConverter.ToMat conv = new OpenCVFrameConverter.ToMat();
+            Mat colorMat = conv.convert(frame);
+            Mat grayMat = new Mat();
+            opencv_imgproc.cvtColor(colorMat, grayMat, opencv_imgproc.COLOR_BGR2GRAY);
+
+            RectVector faces = new RectVector();
+            classifier.detectMultiScale(grayMat, faces);
+            if (faces.size() == 0) {
+                System.out.println("[FaceAuthManager] No face detected in frame.");
                 return null;
             }
-            File tempFile = File.createTempFile("haarcascade_frontalface_", ".xml");
+
+            // Use the first (largest) detected face
+            Rect faceRect = faces.get(0);
+            return new Mat(grayMat, faceRect);
+        } finally {
+            cascadeFile.delete();
+        }
+    }
+
+    // Computes Mean Squared Error between two same-size Mats
+    private double computeMSE(Mat a, Mat b) {
+        Mat diff = new Mat();
+        org.bytedeco.opencv.global.opencv_core.absdiff(a, b, diff);
+        diff.convertTo(diff, org.bytedeco.opencv.global.opencv_core.CV_32F);
+        org.bytedeco.opencv.global.opencv_core.multiply(diff, diff, diff);
+        Scalar sum = org.bytedeco.opencv.global.opencv_core.sumElems(diff);
+        return sum.get(0) / (a.rows() * a.cols());
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  GRID PIN MODE
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Returns a SHA-256 hex hash of the given PIN string for secure storage.
+     */
+    public String hashPin(String pin) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(pin.getBytes());
+            return HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            throw new RuntimeException("SHA-256 unavailable", e);
+        }
+    }
+
+    /**
+     * Returns true if the given raw PIN matches the stored hash.
+     */
+    public boolean verifyPin(String rawPin, String storedHash) {
+        return hashPin(rawPin).equals(storedHash);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────
+
+    private File extractCascadeToTempFile() {
+        try (InputStream is = getClass().getResourceAsStream(CASCADE_RESOURCE)) {
+            if (is == null) return null;
+            File tempFile = File.createTempFile("haarcascade_", ".xml");
             tempFile.deleteOnExit();
             Files.copy(is, tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             return tempFile;
         } catch (Exception e) {
-            System.err.println("[FaceAuthManager] Failed to extract cascade: " + e.getMessage());
+            System.err.println("[FaceAuthManager] Cascade extraction failed: " + e.getMessage());
             return null;
         }
     }
