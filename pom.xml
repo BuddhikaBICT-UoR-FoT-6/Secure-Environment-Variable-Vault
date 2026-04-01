@@ -81,6 +81,19 @@
             <version>2.10.1</version>
         </dependency>
 
+        <!-- ─── Computer Vision / Face Detection ────────────────────── -->
+        <!-- JavaCV wraps OpenCV native libs — no system install needed -->
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacv</artifactId>
+            <version>1.5.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>opencv-platform</artifactId>
+            <version>4.9.0-1.5.10</version>
+        </dependency>
+
         <!-- ─── Testing ──────────────────────────────────────────────── -->
         <!-- JUnit 5 -->
         <dependency>
