@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="15" prefWidth="800" prefHeight="500" style="-fx-background-color: #282a36;" 
+      stylesheets="@dark-theme.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="com.vault.ui.KeyUsageController">
+    
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <VBox spacing="2">
+        <Label fx:id="keyNameLabel" text="Usages of: KEY_NAME" style="-fx-font-size: 20; -fx-text-fill: #50fa7b; -fx-font-weight: bold;"/>
+        <Label fx:id="repoPathLabel" text="Repository: ..." style="-fx-font-size: 12; -fx-text-fill: #6272a4;"/>
+    </VBox>
+
+    <TableView fx:id="usageTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="fileColumn" text="File Path" />
+            <TableColumn fx:id="lineColumn" text="Line" />
+            <TableColumn fx:id="snippetColumn" text="Code Snippet" />
+        </columns>
+    </TableView>
+
+    <HBox alignment="CENTER_LEFT" spacing="10">
+        <Label fx:id="resultCountLabel" text="Search complete." style="-fx-text-fill: #8be9fd;"/>
+        <Region HBox.hgrow="ALWAYS" />
+        <Button text="Close" onAction="#handleClose" styleClass="button-accent"/>
+    </HBox>
+
+</VBox>

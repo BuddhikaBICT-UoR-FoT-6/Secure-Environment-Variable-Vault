@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="15" prefWidth="600" prefHeight="500" style="-fx-background-color: #282a36;" 
+      stylesheets="@dark-theme.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="com.vault.ui.RepoManagerController">
+    
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Link Local Repository" style="-fx-font-size: 20; -fx-text-fill: #bd93f9; -fx-font-weight: bold;"/>
+    
+    <VBox spacing="5">
+        <Label text="Repository Name" style="-fx-text-fill: #f8f8f2;"/>
+        <TextField fx:id="repoNameField" promptText="Enter a name for this repo (e.g. My Website)"/>
+    </VBox>
+
+    <VBox spacing="5">
+        <Label text="Local Path" style="-fx-text-fill: #f8f8f2;"/>
+        <HBox spacing="10">
+            <TextField fx:id="repoPathField" HBox.hgrow="ALWAYS" promptText="C:\Users\...\my-cloned-repo"/>
+            <Button text="Browse" onAction="#handleBrowse"/>
+        </HBox>
+    </VBox>
+
+    <HBox alignment="CENTER_LEFT" spacing="10">
+        <Button fx:id="scanButton" text="Scan for Env Keys" onAction="#handleScan" styleClass="button-accent"/>
+        <Label fx:id="statusLabel" text="Pending scan..."/>
+    </HBox>
+
+    <VBox spacing="5" VBox.vgrow="ALWAYS">
+        <Label text="Detected Keys" style="-fx-text-fill: #f8f8f2;"/>
+        <ListView fx:id="detectedKeysList" VBox.vgrow="ALWAYS" />
+    </VBox>
+
+    <HBox alignment="CENTER_RIGHT" spacing="10">
+        <Button text="Cancel" onAction="#handleCancel"/>
+        <Button fx:id="linkButton" text="Link Repository" onAction="#handleLink" styleClass="button-success"/>
+    </HBox>
+
+</VBox>

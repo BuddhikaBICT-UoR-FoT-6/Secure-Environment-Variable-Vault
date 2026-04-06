@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.Circle?>
+
+<VBox alignment="CENTER" spacing="20" prefWidth="500" prefHeight="550" style="-fx-background-color: #282a36;" 
+      stylesheets="@dark-theme.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="com.vault.ui.FaceLockController">
+    
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <Label fx:id="keyLabel" text="Unlocking Key: ..." style="-fx-font-size: 18; -fx-text-fill: #bd93f9; -fx-font-weight: bold;"/>
+    
+    <VBox alignment="CENTER" spacing="10">
+        <!-- Visual representation of a face scan area -->
+        <Circle radius="50" fill="transparent" stroke="#8be9fd" strokeWidth="2" strokeDashArray="10, 5"/>
+        <Label text="[ FACE ID GATE ]" style="-fx-text-fill: #6272a4; -fx-font-family: 'Courier New';"/>
+    </VBox>
+
+    <Label fx:id="statusLabel" text="Biometric verification required to view this secret." 
+           textAlignment="CENTER" wrapText="true" style="-fx-text-fill: #f8f8f2;"/>
+
+    <HBox alignment="CENTER" spacing="15">
+        <Button fx:id="unlockButton" text="Scan My Face" onAction="#handleFaceUnlock" 
+                styleClass="button-success" prefHeight="40" prefWidth="150"/>
+        <Button fx:id="pinButton" text="Use Grid PIN" onAction="#handlePinMode" 
+                prefHeight="40" prefWidth="150"/>
+    </HBox>
+
+    <!-- Hidden by default: Alphanumeric grid for fallback -->
+    <VBox fx:id="pinVBox" spacing="10" alignment="CENTER">
+        <PasswordField fx:id="pinField" editable="false" promptText="PIN Code" maxWidth="200" 
+                      style="-fx-alignment: center; -fx-font-size: 16;"/>
+        
+        <GridPane fx:id="pinGrid" hgap="5" vgap="5" alignment="CENTER">
+            <!-- Buttons dynamically populated by controller -->
+        </GridPane>
+
+        <HBox spacing="10" alignment="CENTER">
+            <Button text="Clear" onAction="#handleClearPin" style="-fx-text-fill: #ff5555;"/>
+            <Button text="Submit" onAction="#handlePinSubmit" styleClass="button-accent"/>
+        </HBox>
+    </VBox>
+
+    <Hyperlink text="Cancel and Go Back" onAction="#handleCancel" style="-fx-text-fill: #6272a4;"/>
+
+</VBox>
