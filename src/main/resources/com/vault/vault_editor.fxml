@@ -47,8 +47,10 @@
     <TableView fx:id="secretsTable" VBox.vgrow="ALWAYS" styleClass="secrets-table">
         <columns>
             <!-- fx:id tags used by the Java Controller to map to VaultEntry properties -->
-            <TableColumn fx:id="keyColumn" prefWidth="250.0" text="Environment Variable Key" />
-            <TableColumn fx:id="valueColumn" prefWidth="250.0" text="Encrypted Value" />
+            <TableColumn fx:id="keyColumn" prefWidth="180.0" text="Environment Variable Key" />
+            <TableColumn fx:id="valueColumn" prefWidth="180.0" text="Encrypted Value" />
+            <TableColumn fx:id="lockColumn" prefWidth="80.0" text="Lock" />
+            <TableColumn fx:id="actionsColumn" prefWidth="150.0" text="Actions" />
         </columns>
         <!-- Disables the extra empty column placeholder in JavaFX -->
         <columnResizePolicy>

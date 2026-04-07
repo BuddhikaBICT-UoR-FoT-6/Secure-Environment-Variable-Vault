@@ -58,6 +58,7 @@
                 <Button maxWidth="Infinity" styleClass="primary-button" text="New" HBox.hgrow="ALWAYS" onAction="#handleNewProject" />
                 <Button maxWidth="Infinity" styleClass="danger-outline-button" text="Delete" HBox.hgrow="ALWAYS" onAction="#handleDeleteProject" />
             </HBox>
+            <Button maxWidth="Infinity" text="🔗 Link Git Repository" styleClass="button-accent" onAction="#handleLinkRepo" />
         </VBox>
     </left>
 

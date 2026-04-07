@@ -27,6 +27,9 @@ public class VaultEntry {
     // Type of lock: "none" or "face"
     private String lockType;
 
+    // Stores the path to the face crop OR the hash of the PIN
+    private String lockData;
+
     // Full constructor — used by VaultEntryRepository when reading rows from the DB
     public VaultEntry(int id, int projectId, String keyName, String ivHex, String ciphertextHex, boolean isLocked, String lockType){
         this.id = id;
@@ -118,6 +121,14 @@ public class VaultEntry {
 
     public void setLockType(String lockType) {
         this.lockType = lockType != null ? lockType : "none";
+    }
+
+    public String getLockData() {
+        return lockData;
+    }
+
+    public void setLockData(String lockData) {
+        this.lockData = lockData;
     }
 
     @Override

@@ -33,13 +33,16 @@ public class VaultEntryRepository {
     }
 
     private void insert(VaultEntry entry){
-        String sql = "INSERT INTO vault_entries (project_id, key_name, iv_hex, ciphertext_hex) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO vault_entries (project_id, key_name, iv_hex, ciphertext_hex, is_locked, lock_type, lock_data) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try(PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
             stmt.setInt(1, entry.getProjectId());
             stmt.setString(2, entry.getKeyName());
             stmt.setString(3, entry.getIvHex());
             stmt.setString(4, entry.getCiphertextHex());
+            stmt.setInt(5, entry.isLocked() ? 1 : 0);
+            stmt.setString(6, entry.getLockType());
+            stmt.setString(7, entry.getLockData());
 
             stmt.executeUpdate();
 
@@ -54,13 +57,16 @@ public class VaultEntryRepository {
     }
 
     private void update(VaultEntry entry){
-        String sql = "UPDATE vault_entries SET key_name = ?, iv_hex = ?, ciphertext_hex = ? WHERE id = ?";
+        String sql = "UPDATE vault_entries SET key_name = ?, iv_hex = ?, ciphertext_hex = ?, is_locked = ?, lock_type = ?, lock_data = ? WHERE id = ?";
 
         try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setString(1, entry.getKeyName());
             stmt.setString(2, entry.getIvHex());
             stmt.setString(3, entry.getCiphertextHex());
-            stmt.setInt(4, entry.getId());
+            stmt.setInt(4, entry.isLocked() ? 1 : 0);
+            stmt.setString(5, entry.getLockType());
+            stmt.setString(6, entry.getLockData());
+            stmt.setInt(7, entry.getId());
 
             stmt.executeUpdate();
         } catch(SQLException e){
@@ -72,7 +78,7 @@ public class VaultEntryRepository {
     // @param projectId the parent project's database ID
     // @return List of VaultEntries
     public List<VaultEntry> listEntriesForProject(int projectId){
-        String sql = "SELECT id, project_id, key_name, iv_hex, ciphertext_hex FROM vault_entries WHERE project_id = ?";
+        String sql = "SELECT id, project_id, key_name, iv_hex, ciphertext_hex, is_locked, lock_type, lock_data FROM vault_entries WHERE project_id = ?";
 
         List<VaultEntry> entries = new ArrayList<>();
 
@@ -86,9 +92,11 @@ public class VaultEntryRepository {
                             projectId,
                             rs.getString("key_name"),
                             rs.getString("iv_hex"),
-                            rs.getString("ciphertext_hex")
-
+                            rs.getString("ciphertext_hex"),
+                            rs.getInt("is_locked") == 1,
+                            rs.getString("lock_type")
                     );
+                    entry.setLockData(rs.getString("lock_data"));
 
                     entries.add(entry);
 
