@@ -8,7 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ## [1.1.0] - 2026-04-08
-_See bottom of file — in progress._
+### Added
+- **Biometric Face Lock**: Secure individual keys with OpenCV-powered face identity matching.
+- **Grid PIN Fallback**: Advanced alphanumeric grid for PIN entry when webcam is unavailable.
+- **Repository Linking**: Link local Git clones to workspaces for automated environment scanning.
+- **Key Usage Tracking**: Scan source files code-wide to find exact line references for every secret.
+- **Unauthorized Change Monitoring**: Real-time detection of manual `.env` file modifications using NIO WatchService.
+- **Advanced UI**: New dashboard layout with secondary verification gates and scanner results tables.
+
+### Improved
+- Database schema extended with `git_repositories` table and `lock_data` field in `vault_entries`.
+- Shaded JAR build pipeline now includes OpenCV native dependencies.
+- Enhanced UX with Dracula-themed tables and micro-animations.
 
 ---
 
