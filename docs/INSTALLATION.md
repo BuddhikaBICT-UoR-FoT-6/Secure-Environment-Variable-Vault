@@ -1,4 +1,4 @@
-# Installation & Running Guide
+# Installation & Running Guide (v1.1.0)
 
 ## Prerequisites
 
@@ -6,6 +6,7 @@
 |---|---|---|
 | Java JDK | 17 or newer | [adoptium.net](https://adoptium.net) |
 | Apache Maven | 3.8+ | [maven.apache.org](https://maven.apache.org) |
+| Hardware | Webcam | Required for Face ID enrollment/verification |
 
 ---
 
@@ -21,88 +22,63 @@ cd Secure-Environment-Variable-Vault
 ```bash
 mvn clean package
 ```
-This compiles all Java source files and bundles everything (including SQLite, JavaFX, and Bouncy Castle) into a single fat JAR at `target/secure-env-vault-1.0.0.jar`.
+This compiles all Java source files and bundles everything (SQLite, JavaFX, Bouncy Castle, and **OpenCV**) into a single fat JAR at `target/secure-env-vault-1.1.0.jar`.
+
+> [!IMPORTANT]
+> Because OpenCV includes native binaries, the build will attempt to download artifacts for your specific OS architecture (e.g., `opencv-windows-x86_64.jar`). Ensure you have an active internet connection.
 
 ### Step 3 — Run the Application
 ```bash
-java -jar target/secure-env-vault-1.0.0.jar
+java -jar target/secure-env-vault-1.1.0.jar
 ```
 
-The login window will appear. On first launch, a `vault.db` database file is automatically created at `C:\Users\<YourName>\.envvault\vault.db` (Windows) or `~/.envvault/vault.db` (Linux/Mac).
+---
+
+## Biometric Setup (Face ID)
+
+To secure a specific environment variable with your face:
+1. Open a workspace and select a secret.
+2. Click the **Security** button in the actions column.
+3. Choose **Face ID**.
+4. A camera preview will appear. Center your face in the frame until the capture is successful.
+5. The secret is now locked with your identity. Any future attempt to reveal or launch this key will require a biometric scan.
+
+### Grid-PIN Fallback
+If no webcam is detected or face verification fails, you can use the **Grid-PIN fallback**:
+1. Choose **Grid PIN** during enrollment.
+2. Enter a unique alphanumeric PIN.
+3. During unlocking, select the characters in the correct order to regain access.
 
 ---
 
 ## Option B: Install as a Native Windows EXE
-
-> **Requirements:** JDK 17+ must be installed on your machine to run `jpackage`. The resulting `.exe` bundles the Java runtime, so end-users do NOT need Java installed.
 
 ### Step 1 — Build the Fat JAR First
 ```bash
 mvn clean package
 ```
 
-### Step 2 — Package as a Windows EXE using jpackage
-
-Run the following command from the project root directory:
-
-```bash
-jpackage ^
-  --type exe ^
-  --dest target\installer ^
-  --input target ^
-  --name "LocalVault" ^
-  --main-class com.vault.Main ^
-  --main-jar secure-env-vault-1.0.0.jar ^
-  --app-version 1.0.0 ^
-  --description "Secure Local Environment Variable Vault" ^
-  --win-shortcut ^
-  --win-menu ^
-  --win-menu-group "LocalVault"
-```
-
-> **Note:** On Linux/Mac, replace `^` line continuations with `\` and change `--type exe` to `--type dmg` or `--type deb`.
-
-### Step 3 — Run the Installer
-Find the generated installer at:
-```
-target\installer\LocalVault-1.0.0.exe
-```
-
-Double-click it to install LocalVault to your Windows machine. After installation, it will appear in your Start Menu and optionally on your Desktop.
-
----
-
-## Troubleshooting
-
-### 'mvn' is not recognized as an internal or external command
-This happens if Maven is installed but not added to your Windows **PATH** variable.
-
-**The Instant Fix:**
-Find where Maven is installed (usually `C:\Program Files\apache-maven-x.x.x\bin`) and use the full path in quotes:
+### Step 2 — Package with jpackage
 ```powershell
-& "C:\Path\To\Maven\bin\mvn.cmd" clean package
+jpackage `
+  --type exe `
+  --dest target\installer `
+  --input target `
+  --name "SecureVault" `
+  --main-class com.vault.Main `
+  --main-jar secure-env-vault-1.1.0.jar `
+  --app-version 1.1.0 `
+  --description "Secure Environment Variable Vault with Biometric Intelligence" `
+  --win-shortcut `
+  --win-menu `
+  --win-menu-group "SecureVault"
 ```
-
-**The Permanent Fix:**
-1. Open **Edit the system environment variables**.
-2. Click **Environment Variables**.
-3. Under **System variables**, select **Path** and click **Edit**.
-4. Click **New** and paste the path to your Maven `bin` folder (e.g., `C:\Program Files\apache-maven-3.9.9\bin`).
-5. Click OK and **restart your terminal**.
-
-### Application crashes with 'Location is not set'
-Ensure you are running the command from the **root directory** of the project so that Java can find the FXML files in the resources path.
 
 ---
 
-## First-Time Setup (Both Options)
+## v1.1 Advanced Features (First-Time Setup)
 
-1. Launch the app — the login screen appears.
-2. Enter any master password you choose (this becomes your permanent vault password).
-3. Click **Unlock Vault** — the vault generates a cryptographic salt and derives your AES-256 key internally.
-4. On the Dashboard, click **New** to create a workspace (e.g., `My Node Project`).
-5. Click your new project → Click **+ Add Secret**.
-6. Enter a secret in `KEY=VALUE` format (e.g., `DATABASE_URL=postgres://localhost/mydb`).
-7. Click **🚀 LAUNCH PROJECT** to inject your secrets into memory and start your dev server!
-
-> **Security Note:** Your master password is **never stored on disk**. If you forget it, the vault contents are cryptographically unrecoverable.
+1. **Link Git Repo**: On the dashboard, click **🔗 Link Git Repository**. Select a local folder containing your source code.
+2. **Scan Environment**: The vault will automatically monitor the `.env` file in that folder and suggest keys for importation.
+3. **Usage Tracking**: Click **Usage** on any key to see every file and line number where that variable is referenced in your code.
+4. **Change Watcher**: If you manually edit a `.env` file in a linked repository, the vault will alert you of an unauthorized modification.

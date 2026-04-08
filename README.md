@@ -1,24 +1,33 @@
-# Secure Environment Variable Vault
+# Secure Environment Variable Vault (v1.1.0)
 
 ## Description
 
 The Secure Environment Variable Vault is a local desktop application designed to solve one significant developer vulnerability: **the persistence of plaintext `.env` files on developer machines**. 
 
 ### The Problem
-Typically, developers store API keys, database credentials, and secrets in `.env` files. If a developer's machine is compromised, bad actors (or malware) can easily scrape these plaintext files, leading to massive data breaches and lateral movement. Accidentally committing a `.env` file to source control is also a frequent, catastrophic mistake.
+Typically, developers store API keys, database credentials, and secrets in `.env` files. If a developer's machine is compromised, malware can easily scrape these plaintext files. Accidentally committing a `.env` file to source control is also a frequent, catastrophic mistake.
 
-### The Solution
-This application securely encrypts these environment variables using **AES-256-GCM** authenticated encryption. A master password, strengthened via **PBKDF2** (310,000 iterations), guarantees the safety of the vault at rest. 
+### The Solution (v1.1.0 Intelligence)
+This application securely encrypts these environment variables using **AES-256-GCM**. A master password strengthened via **PBKDF2** (310,000 iterations) protects the vault. 
 
-Crucially, **the application never writes the decrypted secrets to disk**. Using Java's `ProcessBuilder`, the vault dynamically hooks into the process environment map in RAM, injects the secrets into memory, and launches your development server (e.g., `npm run dev`, `python script.py`). When the process dies, the memory is cleared.
+**Version 1.1.0** introduces **Smart Integration**, allowing you to link your local Git repositories, scan for variable usage in source code, and lock individual secrets with **Face ID biometrics**.
+
+---
+
+## 🌟 New Features in v1.1.0
+- **Biometric Face Lock**: Individual secrets can be locked with OpenCV identity matching.
+- **Grid-PIN Fallback**: Advanced alphanumeric grid for PIN entry when no webcam is available.
+- **Git Repo Intelligence**: Link local repos to auto-identify environment keys.
+- **Usage Tracker**: Recursively scan code to find every file and line where a secret is referenced.
+- **Shadow .env Watcher**: Real-time detection of manual modifications to linked `.env` files.
 
 ---
 
 ## Tech Stack
-- **Core Language:** Java 17
-- **UI Framework:** JavaFX
-- **Database Architecture:** SQLite via JDBC (Local File Persistence)
-- **Cryptography:** Java Crypto Architecture (`javax.crypto`) - AES-256-GCM, PBKDF2-HMAC-SHA256
+- **Core Language:** Java 17 (JavaFX UI)
+- **Computer Vision:** OpenCV / JavaCV (Face Identity Recognition)
+- **Database:** SQLite (Local Persistence)
+- **Cryptography:** AES-256-GCM, PBKDF2-HMAC-SHA256
 - **Build System:** Maven
 
 ---
@@ -28,72 +37,60 @@ Crucially, **the application never writes the decrypted secrets to disk**. Using
 ```text
 src/main/
 ├── java/com/vault/
-│   ├── App.java                      # Main JavaFX Entry Point
-│   ├── crypto/                       # Cryptography Layer
-│   │   ├── CryptoEngine.java         # AES-256-GCM Encryption Logic
-│   │   ├── KeyDerivation.java        # PBKDF2 Hash functions
-│   │   └── SecureMemory.java         # Array zeroing utility
-│   ├── db/                           # Persistence Layer
-│   │   ├── DatabaseManager.java      # SQLite connection Singleton
-│   │   ├── ProjectRepository.java    # CRUD for Projects
-│   │   ├── VaultEntryRepository.java # CRUD for Encrypted Key-Value pairs
-│   │   └── VaultMetaRepository.java  # PBKDF2 Salt initialization
-│   ├── engine/                       # Execution Engine
-│   │   ├── ProcessInjector.java      # In-RAM Process variable injection
-│   │   └── ProcessOutputStreamer.java# Async Terminal output capture
-│   ├── model/                        # Domain Models
-│   │   ├── Project.java              
-│   │   ├── UnlockedVault.java        # AES Session management
-│   │   └── VaultEntry.java           
+│   ├── crypto/                       # Cryptography Layer (AES/PBKDF2)
+│   ├── db/                           # Persistence Layer (SQLite REPO)
+│   │   ├── GitRepositoryRepository.java # NEW: Git metadata storage
+│   ├── engine/                       # Execution & Injection Engine
+│   ├── scanner/                      # NEW: Intelligence Engine
+│   │   ├── EnvKeyScanner.java        # Parses .env files
+│   │   ├── KeyChangeWatcher.java     # Real-time NIO monitoring
+│   │   └── KeyUsageTracker.java      # Source code regex analysis
+│   ├── security/                     # NEW: Biometric Layer
+│   │   └── FaceAuthManager.java      # Face enrollment & verification
+│   ├── model/                        # Domain Models (Project, Entry, GitRepo)
 │   └── ui/                           # JavaFX Controllers
-│       ├── DashboardController.java  
-│       ├── MasterPasswordController.java
-│       └── VaultEditorController.java
+│       ├── RepoManagerController.java# NEW: Linked repo management
+│       ├── KeyUsageController.java   # NEW: Usage visualization
+│       └── FaceLockController.java   # NEW: Biometric gate
 └── resources/com/vault/              # Views and Styles
     ├── dark-theme.css                # Dracula UI Aesthetics
-    ├── dashboard.fxml                # Sidebar Workspace
-    ├── master_password.fxml          # Login UI
-    └── vault_editor.fxml             # Secrets Table
+    ├── repo_manager.fxml             # NEW: Git linking UI
+    ├── key_usage.fxml                # NEW: Scanner results UI
+    └── face_unlock.fxml              # NEW: Face ID / PIN Gate
 ```
 
 ---
 
 ## MVC Architecture & Data Flow
 
-The project strictly abides by the **Model-View-Controller (MVC)** architectural pattern to separate business logic from the user interface.
+The project strictly abides by the **Model-View-Controller (MVC)** architectural pattern.
 
-- **Views (`.fxml` files)**: Responsible strictly for defining visual elements (inputs, tables, layout). 
-- **Controllers (`.java` UI files)**: Intercept button clicks and user inputs from the FXML, routing these actions to the appropriate managers. For example, `MasterPasswordController` takes the string password and routes it to `KeyDerivation`.
-- **Model (`.java` domain & repository files)**: Represents structured data like `VaultEntry` (which contains Hex strings mapping to an initialization vector and ciphertext). The DAO (Data Access Object) repositories handle querying this model structure directly through SQLite.
+1. **View (FXML)**: Defines the layout and styles (e.g., `face_unlock.fxml` for biometric security).
+2. **Controller (Java)**: Handles logic and verification. `FaceAuthManager` is invoked here to compare camera frames against the enrolled identity.
+3. **Model (DAO)**: Data is mapped from the SQLite `vault.db` into objects like `VaultEntry`.
 
-**Execution Flow Example (Launching a Project):**
-1. The User clicks "Launch" on the **View** (`vault_editor.fxml`).
-2. The **Controller** (`VaultEditorController`) iterates through the list of secrets in the table.
-3. The Controller gathers the **Model** (`VaultEntry`) representations and routes them to the `ProcessInjector` Engine.
-4. The Engine uses the `Project` configurations and the live `UnlockedVault` secret key to map variables invisibly into RAM before calling `.start()`.
+**Smart Scanning Flow:**
+- The `EnvKeyScanner` reads `.env` files in a linked repository.
+- Identified keys are compared against the DB.
+- Results are passed to the `KeyUsageTracker`, which identifies line numbers in `.py`, `.js`, and `.java` files for UI display.
 
 ---
 
 ## Getting Started
 
-### Quick Start (From Source)
+### Build and Run
 ```bash
-# 1. Clone the repo
 git clone https://github.com/BuddhikaBICT-UoR-FoT-6/Secure-Environment-Variable-Vault.git
-cd Secure-Environment-Variable-Vault
-
-# 2. Build and run
 mvn clean package
-java -jar target/secure-env-vault-1.0.0.jar
+java -jar target/secure-env-vault-1.1.0.jar
 ```
 
-### Windows EXE Installer
-To package the application as a standalone Windows `.exe` (no Java install required for end users), see the full guide:
+### Full Installation Guide
+For details on OpenCV setup, Face ID enrollment, and building native installers:
 
 📄 **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
 
 ---
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
