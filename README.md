@@ -1,4 +1,4 @@
-# Secure Environment Variable Vault (v1.1.0)
+# Secure Environment Variable Vault (v1.0.0)
 
 ## Description
 
@@ -7,25 +7,23 @@ The Secure Environment Variable Vault is a local desktop application designed to
 ### The Problem
 Typically, developers store API keys, database credentials, and secrets in `.env` files. If a developer's machine is compromised, malware can easily scrape these plaintext files. Accidentally committing a `.env` file to source control is also a frequent, catastrophic mistake.
 
-### The Solution (v1.1.0 Intelligence)
+### The Solution
 This application securely encrypts these environment variables using **AES-256-GCM**. A master password strengthened via **PBKDF2** (310,000 iterations) protects the vault. 
-
-**Version 1.1.0** introduces **Smart Integration**, allowing you to link your local Git repositories, scan for variable usage in source code, and lock individual secrets with **Face ID biometrics**.
 
 ---
 
-## 🌟 New Features in v1.1.0
-- **Biometric Face Lock**: Individual secrets can be locked with OpenCV identity matching.
-- **Grid-PIN Fallback**: Advanced alphanumeric grid for PIN entry when no webcam is available.
-- **Git Repo Intelligence**: Link local repos to auto-identify environment keys.
-- **Usage Tracker**: Recursively scan code to find every file and line where a secret is referenced.
-- **Shadow .env Watcher**: Real-time detection of manual modifications to linked `.env` files.
+## 🌟 Core Features
+- **Repository Management**: Link local Git repositories to manage their environment variables
+- **Direct .env Management**: Read, update, and delete environment variables directly from `.env` files without database storage
+- **File Locking**: Prevent external modifications to `.env` files during active sessions
+- **File Monitoring**: Real-time detection of manual modifications to linked `.env` files
+- **Secure Backups**: Create encrypted backups of `.env` files with PBKDF2-derived encryption
+- **Recursive Search**: Automatically locate `.env` files anywhere in repository hierarchy
 
 ---
 
 ## Tech Stack
 - **Core Language:** Java 17 (JavaFX UI)
-- **Computer Vision:** OpenCV / JavaCV (Face Identity Recognition)
 - **Database:** SQLite (Local Persistence)
 - **Cryptography:** AES-256-GCM, PBKDF2-HMAC-SHA256
 - **Build System:** Maven
@@ -38,41 +36,54 @@ This application securely encrypts these environment variables using **AES-256-G
 src/main/
 ├── java/com/vault/
 │   ├── crypto/                       # Cryptography Layer (AES/PBKDF2)
-│   ├── db/                           # Persistence Layer (SQLite REPO)
-│   │   ├── GitRepositoryRepository.java # NEW: Git metadata storage
+│   ├── db/                           # Persistence Layer (SQLite)
+│   │   ├── GitRepositoryRepository.java # Git metadata storage
+│   │   ├── VaultEntryRepository.java    # Encrypted key-value storage
+│   │   └── DatabaseManager.java         # SQLite connection manager
 │   ├── engine/                       # Execution & Injection Engine
-│   ├── scanner/                      # NEW: Intelligence Engine
-│   │   ├── EnvKeyScanner.java        # Parses .env files
-│   │   ├── KeyChangeWatcher.java     # Real-time NIO monitoring
-│   │   └── KeyUsageTracker.java      # Source code regex analysis
-│   ├── security/                     # NEW: Biometric Layer
-│   │   └── FaceAuthManager.java      # Face enrollment & verification
-│   ├── model/                        # Domain Models (Project, Entry, GitRepo)
+│   ├── scanner/                      # Intelligence Engine
+│   │   └── EnvKeyScanner.java        # Parses .env files
+│   ├── util/                         # File Management
+│   │   ├── EnvFileLocker.java        # File locking mechanism
+│   │   └── EnvFileWatcher.java       # Real-time file monitoring
+│   ├── model/                        # Domain Models (GitRepo, VaultEntry)
 │   └── ui/                           # JavaFX Controllers
-│       ├── RepoManagerController.java# NEW: Linked repo management
-│       ├── KeyUsageController.java   # NEW: Usage visualization
-│       └── FaceLockController.java   # NEW: Biometric gate
-└── resources/com/vault/              # Views and Styles
-    ├── dark-theme.css                # Dracula UI Aesthetics
-    ├── repo_manager.fxml             # NEW: Git linking UI
-    ├── key_usage.fxml                # NEW: Scanner results UI
-    └── face_unlock.fxml              # NEW: Face ID / PIN Gate
+│       ├── DashboardController.java  # Main repository view
+│       ├── RepoManagerController.java# Repository linking
+│       └── VaultEditorController.java# Key-value CRUD
+└── resources/com/vault/          # Views and Styles
+    ├── dark-theme.css            # Dracula UI Aesthetics
+    ├── dashboard.fxml            # Main UI
+    ├── repo_manager.fxml         # Repository linking UI
+    └── vault_editor.fxml         # Key editor UI
 ```
 
 ---
 
 ## MVC Architecture & Data Flow
 
-The project strictly abides by the **Model-View-Controller (MVC)** architectural pattern.
+The application follows a **Model-View-Controller (MVC)** architecture pattern with clean separation of concerns:
 
-1. **View (FXML)**: Defines the layout and styles (e.g., `face_unlock.fxml` for biometric security).
-2. **Controller (Java)**: Handles logic and verification. `FaceAuthManager` is invoked here to compare camera frames against the enrolled identity.
-3. **Model (DAO)**: Data is mapped from the SQLite `vault.db` into objects like `VaultEntry`.
+1. **View (FXML)**: JavaFX scene graphs defined in FXML files with CSS styling for consistent Dracula aesthetic
+2. **Controller (Java)**: Three main controllers handle user interactions:
+   - `DashboardController`: Repository listing and navigation
+   - `RepoManagerController`: Repository linking and .env file discovery
+   - `VaultEditorController`: Environment variable CRUD operations
+3. **Model (Objects)**: Domain objects like `GitRepository`, `VaultEntry`, and `UnlockedVault`
+4. **Persistence**: SQLite database stores minimal metadata (vault_meta for PBKDF2 salt, git_repositories for linked repos)
 
-**Smart Scanning Flow:**
-- The `EnvKeyScanner` reads `.env` files in a linked repository.
-- Identified keys are compared against the DB.
-- Results are passed to the `KeyUsageTracker`, which identifies line numbers in `.py`, `.js`, and `.java` files for UI display.
+**Data Flow for Key Management:**
+- **Add**: User enters key-value pair → written directly to `.env` file → backup encrypted copy stored
+- **Read**: Load `.env` file recursively from repository → parse KEY=VALUE pairs → display in UI
+- **Update**: Modify value in `.env` file → create backup
+- **Delete**: Remove line from `.env` file → create backup
+
+**Security Model:**
+- Master password encrypted with PBKDF2 (310,000 iterations) + AES-256-GCM
+- Environment variables stored in plaintext within `.env` files (application does not encrypt individual keys)
+- Backup feature encrypts entire `.env` file content for recovery purposes
+- `EnvFileLocker` prevents file modifications during sessions
+- `EnvFileWatcher` monitors for unauthorized changes
 
 ---
 
@@ -82,11 +93,11 @@ The project strictly abides by the **Model-View-Controller (MVC)** architectural
 ```bash
 git clone https://github.com/BuddhikaBICT-UoR-FoT-6/Secure-Environment-Variable-Vault.git
 mvn clean package
-java -jar target/secure-env-vault-1.1.0.jar
+java -jar target/secure-env-vault-1.0.0.jar
 ```
 
 ### Full Installation Guide
-For details on OpenCV setup, Face ID enrollment, and building native installers:
+For details on building native installers:
 
 📄 **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
 
