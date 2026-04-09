@@ -13,9 +13,12 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 
 import javax.crypto.SecretKey;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -32,6 +35,23 @@ public class MasterPasswordController {
     private PasswordField passwordField;
     @FXML
     private Label errorLabel;
+    @FXML
+    private ImageView logoImageView;
+
+    @FXML
+    public void initialize() {
+        // Load the generated logo
+        try {
+            String logoPath = System.getProperty("user.home") + "/.envvault/logo.png";
+            File logoFile = new File(logoPath);
+            if (logoFile.exists()) {
+                Image logoImage = new Image(logoFile.toURI().toString());
+                logoImageView.setImage(logoImage);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to load logo: " + e.getMessage());
+        }
+    }
 
     /**
      * Called automatically by JavaFX when the user clicks the "Unlock" button,

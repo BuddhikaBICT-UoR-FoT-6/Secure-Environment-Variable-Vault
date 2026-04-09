@@ -68,6 +68,10 @@ public class VaultEntry {
         return projectId;
     }
 
+    public void setProjectId(int projectId) {
+        this.projectId = projectId;
+    }
+
     public String getKeyName() {
         return keyName;
     }

@@ -83,4 +83,35 @@ public class VaultMetaRepository {
 
         return newSaltHex;
     }
+
+    /**
+     * Clears all vault data from the database.
+     * This deletes all projects, repositories, and vault entries.
+     * WARNING: This action cannot be undone!
+     */
+    public void clearAllVaultData() {
+        try {
+            // Delete all vault entries
+            String deleteEntries = "DELETE FROM vault_entries";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteEntries)) {
+                stmt.executeUpdate();
+            }
+
+            // Delete all repositories
+            String deleteRepos = "DELETE FROM git_repositories";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteRepos)) {
+                stmt.executeUpdate();
+            }
+
+            // Delete all projects
+            String deleteProjects = "DELETE FROM projects";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteProjects)) {
+                stmt.executeUpdate();
+            }
+
+            System.out.println("[VaultMetaRepo] All vault data cleared successfully.");
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to clear vault data: " + e.getMessage(), e);
+        }
+    }
 }

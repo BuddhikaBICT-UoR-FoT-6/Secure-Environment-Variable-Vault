@@ -118,15 +118,12 @@ public class VaultEditorController {
         });
 
         actionsColumn.setCellFactory(tc -> new TableCell<>() {
-            private final Button usageBtn = new Button("Usage");
-            private final Button lockBtn = new Button("Security");
-            private final HBox container = new HBox(5, usageBtn, lockBtn);
+            private final Button usageBtn = new Button("📊 Usage");
+            private final HBox container = new HBox(5, usageBtn);
 
             {
                 usageBtn.setStyle("-fx-font-size: 10;");
-                lockBtn.setStyle("-fx-font-size: 10;");
                 usageBtn.setOnAction(e -> handleViewUsage(getTableView().getItems().get(getIndex())));
-                lockBtn.setOnAction(e -> handleToggleLock(getTableView().getItems().get(getIndex())));
             }
 
             @Override
@@ -261,65 +258,7 @@ public class VaultEditorController {
         }
     }
 
-    private void handleToggleLock(VaultEntry entry) {
-        if (entry.isLocked()) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("face_unlock.fxml"));
-                Parent root = loader.load();
-                FaceLockController ctrl = loader.getController();
-                
-                ctrl.setup(entry.getKeyName(), entry.getLockData(), entry.getLockData(), (success) -> {
-                    if (success) {
-                        entry.setLocked(false);
-                        entry.setLockType("none");
-                        entry.setLockData(null);
-                        vaultRepo.saveEntry(entry);
-                        Platform.runLater(this::loadSecrets);
-                    }
-                });
-
-                Stage stage = new Stage();
-                stage.setTitle("Biometric Verification");
-                stage.initModality(Modality.APPLICATION_MODAL);
-                stage.setScene(new Scene(root));
-                stage.show();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            ChoiceDialog<String> dialog = new ChoiceDialog<>("Face ID", "Face ID", "Grid PIN");
-            dialog.setTitle("Lock Secret");
-            dialog.setHeaderText("Choose authentication method for: " + entry.getKeyName());
-            
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(mode -> {
-                if (mode.equals("Face ID")) {
-                    String path = faceManager.enrollFace(entry.getId());
-                    if (path != null) {
-                        entry.setLocked(true);
-                        entry.setLockType("face");
-                        entry.setLockData(path);
-                        vaultRepo.saveEntry(entry);
-                        loadSecrets();
-                    } else {
-                        Alert alert = new Alert(Alert.AlertType.ERROR, "Face enrollment failed. Ensure webcam is connected.");
-                        alert.showAndWait();
-                    }
-                } else if (mode.equals("Grid PIN")) {
-                    TextInputDialog pinDialog = new TextInputDialog();
-                    pinDialog.setTitle("Set PIN");
-                    pinDialog.setHeaderText("Enter your secret alphanumeric PIN");
-                    Optional<String> pin = pinDialog.showAndWait();
-                    pin.ifPresent(p -> {
-                        entry.setLocked(true);
-                        entry.setLockType("pin");
-                        entry.setLockData(faceManager.hashPin(p));
-                        vaultRepo.saveEntry(entry);
-                        loadSecrets();
-                    });
-                }
-            });
-        }
-    }
+    // Lock management removed - lock/unlock functionality is built-in via locking at display time
+    // and no longer settable through the UI per user request
 }
+

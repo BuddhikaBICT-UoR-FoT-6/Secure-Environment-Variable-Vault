@@ -1,7 +1,12 @@
 package com.vault.ui;
 
+import com.vault.db.DatabaseManager;
 import com.vault.db.GitRepositoryRepository;
+import com.vault.db.VaultEntryRepository;
 import com.vault.model.GitRepository;
+import com.vault.model.Project;
+import com.vault.model.UnlockedVault;
+import com.vault.model.VaultEntry;
 import com.vault.scanner.EnvKeyScanner;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -16,12 +21,6 @@ import java.util.Map;
 
 /**
  * RepoManagerController — handles the "Link Repository" screen.
- *
- * Allows the user to:
- *   1. Browse to a local cloned git repository directory via a native dialog.
- *   2. Auto-scan the repo for .env keys using EnvKeyScanner.
- *   3. Review and confirm the detected keys before saving to the DB.
- *   4. The linked repo is persisted to the git_repositories table.
  */
 public class RepoManagerController {
 
@@ -33,6 +32,11 @@ public class RepoManagerController {
     @FXML private Button scanButton;
 
     private final GitRepositoryRepository repoRepository = new GitRepositoryRepository();
+    private final VaultEntryRepository vaultRepo = new VaultEntryRepository(DatabaseManager.getInstance().getConnection());
+
+    private Project currentProject;
+    private UnlockedVault session;
+    private Runnable onFinish;
 
     // Holds the currently detected keys before confirmation
     private Map<String, String> scannedKeys;
@@ -43,6 +47,13 @@ public class RepoManagerController {
         statusLabel.setText("");
     }
 
+    /** Sets up the controller with necessary project context. */
+    public void setup(Project project, UnlockedVault session, Runnable onFinish) {
+        this.currentProject = project;
+        this.session = session;
+        this.onFinish = onFinish;
+    }
+
     /** Opens a native OS directory picker and populates the path field. */
     @FXML
     public void handleBrowse() {
@@ -51,7 +62,6 @@ public class RepoManagerController {
         File selected = chooser.showDialog(getStage());
         if (selected != null) {
             repoPathField.setText(selected.getAbsolutePath());
-            // Auto-populate a name from the folder name
             if (repoNameField.getText().isBlank()) {
                 repoNameField.setText(selected.getName());
             }
@@ -71,7 +81,6 @@ public class RepoManagerController {
             return;
         }
 
-        // Run scan on background thread to avoid freezing the UI
         setStatus("🔍 Scanning for .env files...", "info");
         scanButton.setDisable(true);
 
@@ -92,9 +101,14 @@ public class RepoManagerController {
         }, "RepoScanner").start();
     }
 
-    /** Saves the linked repository to the database. */
+    /** Saves the linked repository and its keys to the database. */
     @FXML
     public void handleLink() {
+        if (currentProject == null || session == null) {
+            setStatus("❌ Error: No active project context.", "error");
+            return;
+        }
+
         String path = repoPathField.getText().trim();
         String name = repoNameField.getText().trim();
 
@@ -108,11 +122,35 @@ public class RepoManagerController {
         }
 
         try {
+            // 1. Save the Git Repository metadata
             GitRepository repo = new GitRepository(name, path);
+            repo.setProjectId(currentProject.getId());
             repoRepository.save(repo);
-            setStatus("✅ Repository '" + name + "' linked successfully!", "success");
+
+            // 2. Encrypt and save all discovered keys
+            for (Map.Entry<String, String> entry : scannedKeys.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+
+                VaultEntry vaultEntry = session.encryptEntry(key, value);
+                vaultEntry.setProjectId(currentProject.getId());
+                vaultRepo.saveEntry(vaultEntry);
+            }
+
+            setStatus("✅ Repository linked and " + scannedKeys.size() + " keys added!", "success");
             linkButton.setDisable(true);
+
+            // Wait a moment so user sees the success message, then close and refresh
+            new Thread(() -> {
+                try { Thread.sleep(1200); } catch (InterruptedException ignored) {}
+                Platform.runLater(() -> {
+                    if (onFinish != null) onFinish.run();
+                    getStage().close();
+                });
+            }).start();
+
         } catch (Exception e) {
+            e.printStackTrace();
             setStatus("❌ Error: " + e.getMessage(), "error");
         }
     }

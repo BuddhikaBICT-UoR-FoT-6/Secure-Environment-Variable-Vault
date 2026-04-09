@@ -2,39 +2,30 @@ package com.vault.model;
 
 /**
  * GitRepository — represents one row in the "git_repositories" SQLite table.
- * A GitRepository is a locally cloned GitHub/Git repo that the user has linked
- * to the vault for automatic env key scanning and usage tracking.
  */
 public class GitRepository {
 
     private int id;
-
-    // Human-readable label the user assigns (e.g. "My Node API")
+    private int projectId;
     private String name;
-
-    // Absolute path to the local clone (e.g. C:\Users\HP\Projects\my-api)
     private String localPath;
-
-    // ISO-8601 timestamp from SQLite DEFAULT (datetime('now'))
     private String createdAt;
 
-    // Full constructor — used by GitRepositoryRepository when reading from DB
-    public GitRepository(int id, String name, String localPath, String createdAt) {
+    public GitRepository(int id, int projectId, String name, String localPath, String createdAt) {
         this.id = id;
+        this.projectId = projectId;
         this.name = name;
         this.localPath = localPath;
         this.createdAt = createdAt;
     }
 
-    // Creation constructor — used when the user links a new repo in the UI
     public GitRepository(String name, String localPath) {
-        this.id = -1; // not yet persisted
+        this.id = -1;
+        this.projectId = -1;
         this.name = name;
         this.localPath = localPath;
         this.createdAt = null;
     }
-
-    // --- Getters & Setters ---
 
     public int getId() {
         return id;
@@ -42,6 +33,14 @@ public class GitRepository {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public int getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(int projectId) {
+        this.projectId = projectId;
     }
 
     public String getName() {
@@ -66,6 +65,6 @@ public class GitRepository {
 
     @Override
     public String toString() {
-        return "GitRepository { id=" + id + ", name='" + name + "', path='" + localPath + "' }";
+        return "GitRepository { id=" + id + ", projectId=" + projectId + ", name='" + name + "' }";
     }
 }

@@ -31,11 +31,8 @@
                     <Font name="System Bold" size="18.0" />
                 </font>
             </Label>
-            
-            <!-- A spacer Region to push the Lock button to the far right -->
-            <javafx.scene.layout.Region HBox.hgrow="ALWAYS" />
-            
-            <Button mnemonicParsing="false" styleClass="danger-button" text="Lock &amp; Exit" onAction="#handleLockVault" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button text="🗑 Clear Database" styleClass="danger-button" onAction="#handleClearDatabase" />
         </HBox>
     </top>
 

@@ -1,85 +1,68 @@
 package com.vault.model;
 
+import com.vault.crypto.CryptoEngine;
+import com.vault.db.VaultEntryRepository;
+
 import javax.crypto.SecretKey;
 import java.util.Arrays;
 
-// the in-memory session object for an active, authenticated session
-// one instance of this exists while the vault is open, it has
-// - the live AES-256 SecretKey, a locked/unlocked state flag
-// after lock(), this object is useless — a new one must be created
-// by deriving the key again from the master password
-
+/**
+ * UnlockedVault — the in-memory session object for an active session.
+ */
 public class UnlockedVault {
-    // live AES-256 SecretKey derived from the master password + salt
-    // all encrypt/decrypt operations use this key and Set to null after lock() is called
     private SecretKey secretKey;
-
-    // flag to indicate if the vault is currently unlocked
-    // when true, secretKey is null and no decryption is possible
-    // when false, secretKey is valid and decryption can be performed
-    // this flag is used to prevent accidental use of the secretKey after lock() is called
-    // volatile ensures the UI thread sees the lock immediately
     private boolean locked;
 
-    // creates a new unlocked session
-    // @param secretKey the AES-256 key derived from the correct master password
     public UnlockedVault(SecretKey secretKey){
         this.secretKey = secretKey;
-        this.locked = false; // starts unlocked — the user just authenticated
+        this.locked = false;
     }
 
-    // returns true if the vault is currently unlocked (usable)
     public boolean isUnlocked() {
         return !locked;
     }
 
-    // returns true if the vault is currently locked
     public boolean isLocked() {
         return locked;
     }
 
-    // returns the live SecretKey for use in CryptoEngine operations
-    // throws IllegalStateException if the vault is locked (key is null)
     public SecretKey getSecretKey() {
         if(locked){
-            throw new IllegalStateException("Vault is locked. Cannot retrieve SecretKey. Call isUnlocked() before getSecretKey().");
+            throw new IllegalStateException("Vault is locked.");
         }
         return secretKey;
     }
 
-    // locks the vault by clearing the SecretKey and setting the locked flag
-    // after this is called, the vault is unusable until a new UnlockedVault is created with a valid SecretKey
+    /**
+     * Convenience method to encrypt a key-value pair into a VaultEntry for this session.
+     */
+    public VaultEntry encryptEntry(String keyName, String plaintext) {
+        if (locked) throw new IllegalStateException("Vault is locked.");
+
+        CryptoEngine.EncryptedPayload payload = CryptoEngine.encryptString(plaintext, secretKey);
+        
+        // Create unpersisted VaultEntry
+        VaultEntry entry = new VaultEntry(-1, keyName, 
+                VaultEntryRepository.bytesToHex(payload.iv()), 
+                VaultEntryRepository.bytesToHex(payload.ciphertext()));
+        
+        return entry;
+    }
+
     public void lock(){
-        this.locked = true; // set locked flag first to prevent any further use of the key
-
+        this.locked = true;
         if(secretKey != null){
-            // attempt zero-wipe via reflection
             try{
-                // javax.crypto.spec.SecretKeySpec stores the key in a private byte[] field named "key"
-                java.lang.reflect.Field keyField =
-                        secretKey.getClass().getDeclaredField("key");
-
-                // bypasses the private access modifier to reach private internals
+                java.lang.reflect.Field keyField = secretKey.getClass().getDeclaredField("key");
                 keyField.setAccessible(true);
-
-                // get the byte[] that holds the key material
                 byte[] rawKeyBytes = (byte[]) keyField.get(secretKey);
-
-                // overwrite the key bytes with zeros to attempt to clear it from memory
                 if(rawKeyBytes != null){
                     Arrays.fill(rawKeyBytes, (byte) 0x00);
                 }
-
-                System.out.println(" [Vault] SecretKey bytes zeroed out in memory.");
-
-            } catch(NoSuchFieldException | IllegalAccessException e){
-                System.err.println(" [Vault] Warning: could not wipe SecretKey bytes via reflection: " + e.getMessage());
-
+            } catch(Exception e){
+                System.err.println(" [Vault] Warning: could not wipe SecretKey: " + e.getMessage());
             }
-
-            // finally, set the reference to null to allow GC to reclaim it
             secretKey = null;
         }
-        System.out.println(" [Vault] Vault locked. SecretKey cleared from memory.");
     }
 }
