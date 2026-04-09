@@ -128,9 +128,8 @@ public class RepoManagerController {
         }
 
         try {
-            // 1. Save the Git Repository metadata (no projectId needed)
+            // 1. Save the Git Repository metadata
             GitRepository repo = new GitRepository(name, path);
-            repo.setProjectId(-1); // No project - standalone repo
             repoRepository.save(repo);
 
             // 2. Encrypt and save all discovered keys
@@ -139,7 +138,7 @@ public class RepoManagerController {
                 String value = entry.getValue();
 
                 VaultEntry vaultEntry = session.encryptEntry(key, value);
-                vaultEntry.setProjectId(repo.getId()); // Link to repo ID directly
+                vaultEntry.setRepositoryId(repo.getId()); // Link to repo ID
                 vaultRepo.saveEntry(vaultEntry);
             }
 

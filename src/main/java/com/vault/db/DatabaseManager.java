@@ -110,9 +110,9 @@ public final class DatabaseManager {
 
     }
 
-    // Creates the three database tables on first run
+    // Creates the database tables on first run
     // vault_meta    — stores app-wide settings (the PBKDF2 salt)
-    // projects      — one row per project/workspace the user creates
+    // git_repositories — linked repositories (.env file locations)  
     // vault_entries — the actual Key=Value secrets, encrypted
     private void createSchema(){
         // after the block exits java automatically closes the Statement resource, preventing leaks
@@ -127,50 +127,32 @@ public final class DatabaseManager {
                 );
             """);
 
-            // Table 2: projects
-            // One row per project
-            // launch_cmd  = the command to run, e.g. "npm run dev"
-            st.execute("""
-                CREATE TABLE IF NOT EXISTS projects (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name        TEXT    NOT NULL,
-                    launch_cmd  TEXT,
-                    working_dir TEXT,
-                    created_at  TEXT    DEFAULT (datetime('now'))
-                );
-            """);
-
-            // Table 3: vault_entries
-            // One row per Key=Value pair stored under a project
-            // key_name     = the environment variable name, e.g. "DATABASE_URL"
-            // stored in PLAINTEXT — variable names are not secret
-            //   iv_hex       = the 12-byte AES-GCM IV, stored as hex string
-            //   is_locked    = 0 (unlocked) or 1 (face-locked)
-            //   lock_type    = 'none' | 'face'
-            //   If a project is deleted, all its vault entries are automatically
-            st.execute("""
-                CREATE TABLE IF NOT EXISTS vault_entries (
-                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                    project_id     INTEGER NOT NULL,
-                    key_name       TEXT    NOT NULL,
-                    iv_hex         TEXT    NOT NULL,
-                    ciphertext_hex TEXT    NOT NULL,
-                    is_locked      INTEGER NOT NULL DEFAULT 0,
-                    lock_type      TEXT    NOT NULL DEFAULT 'none',
-                    lock_data      TEXT,
-                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-                );
-            """);
-
-            // Table 4: git_repositories
-            // Tracks linked local clones of GitHub repositories
-            // path = absolute local path to the cloned repo
+            // Table 2: git_repositories
+            // Tracks linked repositories (.env file locations)
+            // path = absolute local path to the repository
             st.execute("""
                 CREATE TABLE IF NOT EXISTS git_repositories (
                     id         INTEGER PRIMARY KEY AUTOINCREMENT,
                     name       TEXT    NOT NULL,
                     path       TEXT    NOT NULL UNIQUE,
                     created_at TEXT    DEFAULT (datetime('now'))
+                );
+            """);
+
+            // Table 3: vault_entries
+            // One row per Key=Value pair stored under a repository
+            // key_name     = the environment variable name, e.g. "DATABASE_URL"
+            // stored in PLAINTEXT — variable names are not secret
+            // iv_hex       = the 12-byte AES-GCM IV, stored as hex string
+            // If a repository is deleted, all its vault entries are automatically removed
+            st.execute("""
+                CREATE TABLE IF NOT EXISTS vault_entries (
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    repository_id  INTEGER NOT NULL,
+                    key_name       TEXT    NOT NULL,
+                    iv_hex         TEXT    NOT NULL,
+                    ciphertext_hex TEXT    NOT NULL,
+                    FOREIGN KEY (repository_id) REFERENCES git_repositories(id) ON DELETE CASCADE
                 );
             """);
 

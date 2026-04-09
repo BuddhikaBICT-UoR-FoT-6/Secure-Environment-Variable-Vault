@@ -16,6 +16,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -46,6 +47,15 @@ public class DashboardController {
         metaRepo = new VaultMetaRepository(DatabaseManager.getInstance().getConnection());
         repoListModel = FXCollections.observableArrayList();
         repoListView.setItems(repoListModel);
+
+        // Display repository names nicely in the ListView
+        repoListView.setCellFactory(lv -> new ListCell<GitRepository>() {
+            @Override
+            protected void updateItem(GitRepository repo, boolean empty) {
+                super.updateItem(repo, empty);
+                setText(empty || repo == null ? "" : repo.getName());
+            }
+        });
 
         refreshRepoList();
 

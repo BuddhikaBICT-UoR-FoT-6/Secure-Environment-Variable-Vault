@@ -38,6 +38,10 @@ public class MasterPasswordController {
     @FXML
     private ImageView logoImageView;
 
+    private int logoClickCount = 0;
+    private long lastClickTime = 0;
+    private static final long CLICK_TIMEOUT_MS = 3000; // Reset counter after 3 seconds
+
     @FXML
     public void initialize() {
         // Load the generated logo
@@ -50,6 +54,95 @@ public class MasterPasswordController {
             }
         } catch (Exception e) {
             System.err.println("Failed to load logo: " + e.getMessage());
+        }
+
+        // Add click handler for logo reset feature
+        logoImageView.setOnMouseClicked(event -> handleLogoClick());
+        logoImageView.setStyle("-fx-cursor: hand;");
+    }
+
+    /**
+     * Handles logo clicks for master password reset feature.
+     * Clicking 6 times within 3 seconds triggers reset dialog.
+     */
+    private void handleLogoClick() {
+        long currentTime = System.currentTimeMillis();
+        
+        // Reset counter if too much time has passed
+        if (currentTime - lastClickTime > CLICK_TIMEOUT_MS) {
+            logoClickCount = 0;
+        }
+        
+        logoClickCount++;
+        lastClickTime = currentTime;
+        
+        System.out.println("[Debug] Logo clicked: " + logoClickCount + " times");
+        
+        if (logoClickCount >= 6) {
+            logoClickCount = 0; // Reset counter
+            showResetPasswordDialog();
+        }
+    }
+
+    /**
+     * Shows confirmation dialog and resets the master password.
+     */
+    private void showResetPasswordDialog() {
+        javafx.scene.control.Alert confirmAlert = new javafx.scene.control.Alert(
+            javafx.scene.control.Alert.AlertType.WARNING);
+        confirmAlert.setTitle("Reset Master Password");
+        confirmAlert.setHeaderText("⚠️ WARNING: Reset Vault?");
+        confirmAlert.setContentText(
+            "This will DELETE ALL stored data and reset the master password.\n\n" +
+            "All repositories and encrypted keys will be permanently lost.\n\n" +
+            "This action CANNOT be undone!\n\n" +
+            "Do you want to continue?");
+        
+        confirmAlert.getButtonTypes().setAll(
+            javafx.scene.control.ButtonType.YES,
+            javafx.scene.control.ButtonType.NO);
+        
+        java.util.Optional<javafx.scene.control.ButtonType> result = confirmAlert.showAndWait();
+        
+        if (result.isPresent() && result.get() == javafx.scene.control.ButtonType.YES) {
+            performVaultReset();
+        }
+    }
+
+    /**
+     * Performs the actual vault reset by clearing all database data.
+     */
+    private void performVaultReset() {
+        try {
+            VaultMetaRepository metaRepo = new VaultMetaRepository(
+                DatabaseManager.getInstance().getConnection());
+            
+            // Clear all vault data
+            metaRepo.clearAllVaultData();
+            
+            javafx.scene.control.Alert successAlert = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.INFORMATION);
+            successAlert.setTitle("Vault Reset Complete");
+            successAlert.setHeaderText("✅ Vault has been reset");
+            successAlert.setContentText(
+                "All data has been cleared.\n\n" +
+                "You can now set a new master password by entering it below.");
+            successAlert.showAndWait();
+            
+            // Clear the password field
+            passwordField.clear();
+            errorLabel.setVisible(false);
+            
+            System.out.println("[Reset] Vault reset successful");
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            javafx.scene.control.Alert errorAlert = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.ERROR);
+            errorAlert.setTitle("Reset Failed");
+            errorAlert.setHeaderText("❌ Failed to reset vault");
+            errorAlert.setContentText("Error: " + e.getMessage());
+            errorAlert.showAndWait();
         }
     }
 

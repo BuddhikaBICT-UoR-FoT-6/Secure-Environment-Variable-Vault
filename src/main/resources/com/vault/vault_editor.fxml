@@ -25,17 +25,11 @@
 
     <!-- Header Area -->
     <HBox alignment="CENTER_LEFT" spacing="10.0">
-        <Label fx:id="projectTitleLabel" text="Project Secrets" textFill="#f1fa8c">
+        <Label fx:id="projectTitleLabel" text="Repository Secrets" textFill="#f1fa8c">
             <font>
                 <Font name="System Bold" size="20.0" />
             </font>
         </Label>
-        
-        <!-- Pushes the launch button to the right side -->
-        <Region HBox.hgrow="ALWAYS" />
-        
-        <!-- The big green LAUNCH button that triggers the ProcessInjector -->
-        <Button mnemonicParsing="false" styleClass="success-button" text="🚀 LAUNCH PROJECT" onAction="#handleLaunch" />
     </HBox>
 
     <Label text="These environment variables will be injected into memory only." textFill="#6272a4" />
@@ -47,10 +41,9 @@
     <TableView fx:id="secretsTable" VBox.vgrow="ALWAYS" styleClass="secrets-table">
         <columns>
             <!-- fx:id tags used by the Java Controller to map to VaultEntry properties -->
-            <TableColumn fx:id="keyColumn" prefWidth="180.0" text="Environment Variable Key" />
-            <TableColumn fx:id="valueColumn" prefWidth="180.0" text="Encrypted Value" />
-            <TableColumn fx:id="lockColumn" prefWidth="80.0" text="Lock" />
-            <TableColumn fx:id="actionsColumn" prefWidth="150.0" text="Actions" />
+            <TableColumn fx:id="keyColumn" prefWidth="200.0" text="Environment Variable Key" />
+            <TableColumn fx:id="valueColumn" prefWidth="250.0" text="Value" />
+            <TableColumn fx:id="actionsColumn" prefWidth="140.0" text="Actions" />
         </columns>
         <!-- Disables the extra empty column placeholder in JavaFX -->
         <columnResizePolicy>
@@ -61,7 +54,7 @@
     <!-- Footer Controls -->
     <HBox spacing="10.0" alignment="CENTER_LEFT">
         <Button mnemonicParsing="false" styleClass="primary-outline-button" text="+ Add Secret" onAction="#handleAddSecret" />
-        <Button mnemonicParsing="false" styleClass="danger-outline-button" text="🗑 Delete Selected" onAction="#handleDeleteSecret" />
+        <Button mnemonicParsing="false" styleClass="success-button" text="💾 Backup Encrypted Env" onAction="#handleBackupEnv" />
     </HBox>
 
 </VBox>

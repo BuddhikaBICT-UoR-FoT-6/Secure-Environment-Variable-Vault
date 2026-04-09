@@ -33,16 +33,13 @@ public class VaultEntryRepository {
     }
 
     private void insert(VaultEntry entry){
-        String sql = "INSERT INTO vault_entries (project_id, key_name, iv_hex, ciphertext_hex, is_locked, lock_type, lock_data) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO vault_entries (repository_id, key_name, iv_hex, ciphertext_hex) VALUES (?, ?, ?, ?)";
 
         try(PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
-            stmt.setInt(1, entry.getProjectId());
+            stmt.setInt(1, entry.getRepositoryId());
             stmt.setString(2, entry.getKeyName());
             stmt.setString(3, entry.getIvHex());
             stmt.setString(4, entry.getCiphertextHex());
-            stmt.setInt(5, entry.isLocked() ? 1 : 0);
-            stmt.setString(6, entry.getLockType());
-            stmt.setString(7, entry.getLockData());
 
             stmt.executeUpdate();
 
@@ -57,16 +54,13 @@ public class VaultEntryRepository {
     }
 
     private void update(VaultEntry entry){
-        String sql = "UPDATE vault_entries SET key_name = ?, iv_hex = ?, ciphertext_hex = ?, is_locked = ?, lock_type = ?, lock_data = ? WHERE id = ?";
+        String sql = "UPDATE vault_entries SET key_name = ?, iv_hex = ?, ciphertext_hex = ? WHERE id = ?";
 
         try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setString(1, entry.getKeyName());
             stmt.setString(2, entry.getIvHex());
             stmt.setString(3, entry.getCiphertextHex());
-            stmt.setInt(4, entry.isLocked() ? 1 : 0);
-            stmt.setString(5, entry.getLockType());
-            stmt.setString(6, entry.getLockData());
-            stmt.setInt(7, entry.getId());
+            stmt.setInt(4, entry.getId());
 
             stmt.executeUpdate();
         } catch(SQLException e){
@@ -74,41 +68,33 @@ public class VaultEntryRepository {
         }
     }
 
-    // loads ALL encrypted entries for a specific project
-    // @param projectId the parent project's database ID
+    // loads ALL encrypted entries for a specific repository
+    // @param repositoryId the parent repository's database ID
     // @return List of VaultEntries
-    public List<VaultEntry> listEntriesForProject(int projectId){
-        String sql = "SELECT id, project_id, key_name, iv_hex, ciphertext_hex, is_locked, lock_type, lock_data FROM vault_entries WHERE project_id = ?";
+    public List<VaultEntry> listEntriesForRepository(int repositoryId){
+        String sql = "SELECT id, repository_id, key_name, iv_hex, ciphertext_hex FROM vault_entries WHERE repository_id = ?";
 
         List<VaultEntry> entries = new ArrayList<>();
 
         try(PreparedStatement stmt = conn.prepareStatement(sql)){
-            stmt.setInt(1, projectId);
+            stmt.setInt(1, repositoryId);
 
             try(ResultSet rs = stmt.executeQuery()){
                 while(rs.next()){
                     VaultEntry entry = new VaultEntry(
                             rs.getInt("id"),
-                            projectId,
+                            rs.getInt("repository_id"),
                             rs.getString("key_name"),
                             rs.getString("iv_hex"),
-                            rs.getString("ciphertext_hex"),
-                            rs.getInt("is_locked") == 1,
-                            rs.getString("lock_type")
+                            rs.getString("ciphertext_hex")
                     );
-                    entry.setLockData(rs.getString("lock_data"));
-
                     entries.add(entry);
-
                 }
-
             }
-
         } catch(SQLException e){
-            throw new RuntimeException("Failed to list vault entries for project id: " + projectId, e);
+            throw new RuntimeException("Failed to list vault entries for repository id: " + repositoryId, e);
         }
         return entries;
-
     }
 
     // Delete
