@@ -8,6 +8,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.text.Font?>
 
 <!--
@@ -26,13 +27,13 @@
             <padding>
                 <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
             </padding>
-            <Label text="🔒 Vault Dashboard" textFill="#bd93f9">
+            <Label text="🔒 Repository Vault" textFill="#bd93f9">
                 <font>
                     <Font name="System Bold" size="18.0" />
                 </font>
             </Label>
             <Region HBox.hgrow="ALWAYS" />
-            <Button text="🗑 Clear Database" styleClass="danger-button" onAction="#handleClearDatabase" />
+            <Button text="🗑 Clear All Data" styleClass="danger-button" onAction="#handleClearDatabase" />
         </HBox>
     </top>
 
@@ -42,20 +43,19 @@
             <padding>
                 <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
             </padding>
-            <Label text="Your Workspaces" textFill="#8be9fd">
+            <Label text="Your Repositories" textFill="#8be9fd">
                 <font>
                     <Font name="System Bold" size="14.0" />
                 </font>
             </Label>
             
-            <!-- This ListView is dynamically populated with Projects by the Controller -->
-            <ListView fx:id="projectListView" VBox.vgrow="ALWAYS" styleClass="project-list" />
+            <!-- List of repositories -->
+            <ListView fx:id="repoListView" VBox.vgrow="ALWAYS" styleClass="project-list" />
             
             <HBox spacing="10.0">
-                <Button maxWidth="Infinity" styleClass="primary-button" text="New" HBox.hgrow="ALWAYS" onAction="#handleNewProject" />
-                <Button maxWidth="Infinity" styleClass="danger-outline-button" text="Delete" HBox.hgrow="ALWAYS" onAction="#handleDeleteProject" />
+                <Button maxWidth="Infinity" styleClass="primary-button" text="+ Add Repo" HBox.hgrow="ALWAYS" onAction="#handleLinkRepo" />
+                <Button maxWidth="Infinity" styleClass="danger-outline-button" text="Remove" HBox.hgrow="ALWAYS" onAction="#handleDeleteRepo" />
             </HBox>
-            <Button maxWidth="Infinity" text="🔗 Link Git Repository" styleClass="button-accent" onAction="#handleLinkRepo" />
         </VBox>
     </left>
 
@@ -63,8 +63,7 @@
     <!-- Leave it blank! The Controller dynamically loads vault_editor.fxml into this space when a project is clicked. -->
     <center>
         <VBox alignment="CENTER" styleClass="empty-state">
-            <Label text="Select or create a workspace to manage variables." textFill="#6272a4" />
-        </VBox>
+            <Label text="Select or add a repository to manage its encrypted key
     </center>
 
 </BorderPane>

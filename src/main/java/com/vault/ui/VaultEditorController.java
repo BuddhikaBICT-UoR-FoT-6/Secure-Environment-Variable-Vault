@@ -4,8 +4,6 @@ import com.vault.crypto.CryptoEngine;
 import com.vault.db.DatabaseManager;
 import com.vault.db.VaultEntryRepository;
 import com.vault.db.GitRepositoryRepository;
-import com.vault.engine.ProcessInjector;
-import com.vault.model.Project;
 import com.vault.model.UnlockedVault;
 import com.vault.model.VaultEntry;
 import com.vault.model.GitRepository;
@@ -54,7 +52,7 @@ public class VaultEditorController {
     @FXML
     private TableColumn<VaultEntry, Void> actionsColumn;
 
-    private Project currentProject;
+    private GitRepository currentRepo;
     private UnlockedVault session;
     private VaultEntryRepository vaultRepo;
     private ObservableList<VaultEntry> entriesModel;
@@ -138,17 +136,22 @@ public class VaultEditorController {
 
     /**
      * Called by DashboardController immediately after loading this view.
+     * Works with repository instead of project.
      */
-    public void initData(Project project, UnlockedVault session) {
-        this.currentProject = project;
+    public void initDataForRepo(GitRepository repo, UnlockedVault session) {
+        this.currentRepo = repo;
         this.session = session;
-        projectTitleLabel.setText("Secrets for: " + project.getName());
+        projectTitleLabel.setText("Keys for: " + repo.getName());
         loadSecrets();
     }
 
     private void loadSecrets() {
         entriesModel.clear();
-        List<VaultEntry> encryptedEntries = vaultRepo.listEntriesForProject(currentProject.getId());
+        if (currentRepo == null) {
+            return;
+        }
+
+        List<VaultEntry> encryptedEntries = vaultRepo.listEntriesForProject(currentRepo.getId());
 
         for (VaultEntry entry : encryptedEntries) {
             try {
@@ -183,7 +186,7 @@ public class VaultEditorController {
                 try {
                     CryptoEngine.EncryptedPayload payload = CryptoEngine.encryptString(value, session.getSecretKey());
                     VaultEntry newEntry = new VaultEntry(
-                            currentProject.getId(),
+                            currentRepo.getId(),
                             key,
                             VaultEntryRepository.bytesToHex(payload.iv()),
                             VaultEntryRepository.bytesToHex(payload.ciphertext()));
@@ -203,32 +206,6 @@ public class VaultEditorController {
         if (selected != null) {
             vaultRepo.deleteEntry(selected.getId());
             loadSecrets();
-        }
-    }
-
-    @FXML
-    public void handleLaunch(ActionEvent event) {
-        if (currentProject.getLaunchCommand() == null || currentProject.getWorkingDirectory() == null) {
-            Alert alert = new Alert(Alert.AlertType.WARNING,
-                    "Please configure the Launch Command and Working Directory first!");
-            alert.showAndWait();
-            return;
-        }
-
-        try {
-            ProcessInjector injector = new ProcessInjector();
-            Process p = injector.launch(
-                    currentProject.getLaunchCommand(),
-                    currentProject.getWorkingDirectory(),
-                    vaultRepo.listEntriesForProject(currentProject.getId()), 
-                    session.getSecretKey());
-
-            System.out.println("[App] Process launched successfully in background.");
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Failed to launch process: " + e.getMessage());
-            alert.showAndWait();
         }
     }
 

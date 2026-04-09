@@ -4,10 +4,10 @@ import com.vault.db.DatabaseManager;
 import com.vault.db.GitRepositoryRepository;
 import com.vault.db.VaultEntryRepository;
 import com.vault.model.GitRepository;
-import com.vault.model.Project;
 import com.vault.model.UnlockedVault;
 import com.vault.model.VaultEntry;
 import com.vault.scanner.EnvKeyScanner;
+import com.vault.util.EnvFileLocker;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -21,6 +21,7 @@ import java.util.Map;
 
 /**
  * RepoManagerController — handles the "Link Repository" screen.
+ * Works directly with repositories without project hierarchy.
  */
 public class RepoManagerController {
 
@@ -34,12 +35,12 @@ public class RepoManagerController {
     private final GitRepositoryRepository repoRepository = new GitRepositoryRepository();
     private final VaultEntryRepository vaultRepo = new VaultEntryRepository(DatabaseManager.getInstance().getConnection());
 
-    private Project currentProject;
     private UnlockedVault session;
     private Runnable onFinish;
 
     // Holds the currently detected keys before confirmation
     private Map<String, String> scannedKeys;
+    private String envFilePathToLock;
 
     @FXML
     public void initialize() {
@@ -47,9 +48,8 @@ public class RepoManagerController {
         statusLabel.setText("");
     }
 
-    /** Sets up the controller with necessary project context. */
-    public void setup(Project project, UnlockedVault session, Runnable onFinish) {
-        this.currentProject = project;
+    /** Sets up the controller with vault session. */
+    public void setup(UnlockedVault session, Runnable onFinish) {
         this.session = session;
         this.onFinish = onFinish;
     }
@@ -88,6 +88,12 @@ public class RepoManagerController {
             EnvKeyScanner scanner = new EnvKeyScanner(path);
             scannedKeys = scanner.scan();
             List<String> keyList = List.copyOf(scannedKeys.keySet());
+            
+            // Find the .env file path for locking
+            File[] envFiles = new File(path).listFiles((d, n) -> n.equals(".env"));
+            if (envFiles != null && envFiles.length > 0) {
+                envFilePathToLock = envFiles[0].getAbsolutePath();
+            }
 
             Platform.runLater(() -> {
                 detectedKeysList.setItems(FXCollections.observableArrayList(keyList));
@@ -101,11 +107,11 @@ public class RepoManagerController {
         }, "RepoScanner").start();
     }
 
-    /** Saves the linked repository and its keys to the database. */
+    /** Saves the linked repository and its keys to the database, then locks the .env file. */
     @FXML
     public void handleLink() {
-        if (currentProject == null || session == null) {
-            setStatus("❌ Error: No active project context.", "error");
+        if (session == null) {
+            setStatus("❌ Error: No active vault session.", "error");
             return;
         }
 
@@ -122,9 +128,9 @@ public class RepoManagerController {
         }
 
         try {
-            // 1. Save the Git Repository metadata
+            // 1. Save the Git Repository metadata (no projectId needed)
             GitRepository repo = new GitRepository(name, path);
-            repo.setProjectId(currentProject.getId());
+            repo.setProjectId(-1); // No project - standalone repo
             repoRepository.save(repo);
 
             // 2. Encrypt and save all discovered keys
@@ -133,11 +139,22 @@ public class RepoManagerController {
                 String value = entry.getValue();
 
                 VaultEntry vaultEntry = session.encryptEntry(key, value);
-                vaultEntry.setProjectId(currentProject.getId());
+                vaultEntry.setProjectId(repo.getId()); // Link to repo ID directly
                 vaultRepo.saveEntry(vaultEntry);
             }
 
-            setStatus("✅ Repository linked and " + scannedKeys.size() + " keys added!", "success");
+            // 3. Lock the .env file
+            if (envFilePathToLock != null && !envFilePathToLock.isEmpty()) {
+                boolean locked = EnvFileLocker.lockEnvFile(envFilePathToLock);
+                if (locked) {
+                    setStatus("✅ Repository linked, keys encrypted & .env locked!", "success");
+                } else {
+                    setStatus("⚠ Repository linked but failed to lock .env file.", "warning");
+                }
+            } else {
+                setStatus("✅ Repository linked and " + scannedKeys.size() + " keys added!", "success");
+            }
+
             linkButton.setDisable(true);
 
             // Wait a moment so user sees the success message, then close and refresh

@@ -1,6 +1,7 @@
 package com.vault;
 
 import com.vault.db.DatabaseManager;
+import com.vault.util.EnvFileLocker;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -143,6 +144,10 @@ public class App extends Application {
     @Override
     public void stop() throws Exception {
         System.out.println("[App] Shutting down...");
+        
+        // Release all .env file locks before exit
+        EnvFileLocker.releaseAllLocks();
+        
         DatabaseManager.getInstance().close();
     }
 
